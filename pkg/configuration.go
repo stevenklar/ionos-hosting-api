@@ -57,9 +57,18 @@ type Configuration struct {
 	HTTPClient    *http.Client
 }
 
-func NewConfiguration() *Configuration {
+func NewConfigurationSsl() *Configuration {
 	cfg := &Configuration{
 		BasePath:      "https://api.hosting.ionos.com/ssl",
+		DefaultHeader: make(map[string]string),
+		UserAgent:     "Swagger-Codegen/1.0.0/go",
+	}
+	return cfg
+}
+
+func NewConfigurationDns() *Configuration {
+	cfg := &Configuration{
+		BasePath:      "https://api.hosting.ionos.com/dns",
 		DefaultHeader: make(map[string]string),
 		UserAgent:     "Swagger-Codegen/1.0.0/go",
 	}

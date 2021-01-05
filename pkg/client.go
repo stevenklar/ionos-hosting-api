@@ -43,9 +43,9 @@ type APIClient struct {
 	common service // Reuse a single struct instead of allocating one for each service on the heap.
 
 	// API Services
-	DynamicDNSApi *DynamicDNSApiService
-	RecordsApi *RecordsApiService
-	ZonesApi *ZonesApiService
+	DynamicDNSApi   *DynamicDNSApiService
+	RecordsApi      *RecordsApiService
+	ZonesApi        *ZonesApiService
 	CertificatesApi *CertificatesApiService
 }
 
@@ -314,17 +314,17 @@ func (c *APIClient) prepareRequest(
 }
 
 func (c *APIClient) decode(v interface{}, b []byte, contentType string) (err error) {
-		if strings.Contains(contentType, "application/xml") {
-			if err = xml.Unmarshal(b, v); err != nil {
-				return err
-			}
-			return nil
-		} else if strings.Contains(contentType, "application/json") {
-			if err = json.Unmarshal(b, v); err != nil {
-				return err
-			}
-			return nil
+	if strings.Contains(contentType, "application/xml") {
+		if err = xml.Unmarshal(b, v); err != nil {
+			return err
 		}
+		return nil
+	} else if strings.Contains(contentType, "application/json") {
+		if err = json.Unmarshal(b, v); err != nil {
+			return err
+		}
+		return nil
+	}
 	return errors.New("undefined response type")
 }
 
