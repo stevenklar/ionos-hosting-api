@@ -1,0 +1,2465 @@
+openapi: 3.0.2
+info:
+  title: 'Domains API'
+  description: |
+    # Working with the API
+    Every endpoint uses the `X-Api-Key` header for authorization, to obtain the key please see the [Official Documentation](/docs/getstarted).
+
+    The API supports operations through which the customer can retrieve or update data regarding domains or other associated entities such as contacts, nameservers, domain statuses, DNS Security or privacy feature.
+
+    # Support
+     Support questions may be posted in English: <a href='/docs/getstarted#support'>API Beta Support</a>.
+
+    Please note that in the Beta phase we offer support in the business Hours Mo-Fri 9:00-17:00 EET.
+    <h2>
+    <details>
+      <summary>Release notes</summary>
+
+      Version 1.0.0 - Exposed Read and Update operations for customer domains data.
+
+      Version 1.0.1 - Added new field 'type' on request information, which describes the type of the submitted request
+
+      Version 1.0.2 - Exposed validation endpoints for contacts and domain names and also for tld specific information
+    </details>
+    </h2>
+  contact:
+    name: API Beta Support
+    url: '/docs/getstarted#support'
+  version: 1.0.0
+servers:
+  - url: https://api.hosting.ionos.com/domains
+    description: Production server
+
+x-tagGroups:
+  - name: Domains Operations
+    tags:
+      - Domains
+      - Contacts
+      - Nameservers
+      - Domain Statuses
+      - DNS Security
+      - Privacy
+      - AuthCode
+      - Requests
+
+tags:
+  - name: Domains
+    description: |
+      Operations over the customer's domains through which the domain data can be retrieved or updated regardless of the contract on which the domains are registered.
+  - name: Contacts
+    description: |
+      Operations over the domain's contact data. The registrant information can be updated as well as technical or administrative contacts.
+  - name: Nameservers
+    description: |
+      Operations regarding the nameservers of the domain. Customer can update the domain's hosts with his custom nameservers.
+  - name: Domain Statuses
+    description: |
+      Operations over the domain statuses through which certain statuses which prohibit some operations can be added or removed.
+  - name: DNS Security
+    description: |
+      Operations over the DNS Security data associated with the domain. This is only available for tlds which have the DNSSec feature enabled.
+  - name: Privacy
+    description: |
+      Operations regarding Domain Privacy feature by means of which contact information can remain private.
+  - name: AuthCode
+    description: |
+      Operations over the authorization code of the domain which can be regenerated.
+  - name: Requests
+    description: |
+      Operations over the submitted requests. Everytime the customer submits a new update request, a request id is retrieved which can be checked later for its status or possible errors.
+  - name: Validation
+    description: |
+      Operations regarding validation of bulk domain names or contacts data.
+  - name: TLDs
+    description: |
+      Information about TLD supported features (e.g. authInfo, IDN domain names, private registration, supported contact types, autorenew)
+
+
+components:
+  schemas:
+    domains:
+      title: Domains
+      type: object
+      properties:
+        count:
+          type: integer
+          format: int32
+        domains:
+          type: array
+          items:
+            "$ref": "#/components/schemas/domainSmall"
+
+    domainLarge:
+      title: Domain Large Representation
+      type: object
+      properties:
+        id:
+          description: Unique domain identifier
+          type: string
+        name:
+          description: Domain name
+          type: string
+        encodedName:
+          type: string
+          description: OPTIONAL - Appears only in case of IDN domain names
+        tld:
+          description: Top level domain name
+          type: string
+        authInfo:
+          type: string
+          description: OPTIONAL - This field is hidden in case the domain has Domain Guard activated. Also, for .eu and .de domains this field is not set by default. The client should explicitly generate it in order to exist.
+        privacyEnabled:
+          description: Indicates whether the domain privacy is turned on/off
+          type: boolean
+        domainLock:
+          type: boolean
+        transferLock:
+          type: boolean
+        autoRenew:
+          type: boolean
+        expirationDate:
+          description: Domain expiration date
+          type: string
+          format: 'date-time'
+        cancellationDate:
+          type: string
+          format: 'date-time'
+          description: OPTIONAL - This field is used to replace the autorenew flag, when the domain expiration date is not synchronized with the contract billing date of the domain.
+        dnsSecEnabled:
+          description: Indicates whether the DNS sucurity extensions are turned on/off
+          type: boolean
+
+    domainSmall:
+      title: Domain Small Representation
+      type: object
+      properties:
+        id:
+          description: Unique domain identifier
+          type: string
+        name:
+          description: Domain name
+          type: string
+        encodedName:
+          type: string
+          description: OPTIONAL - Appears only in case of IDN domain names
+        tld:
+          description: Top level domain name
+          type: string
+
+    contacts:
+      type: object
+      title: Contacts
+      properties:
+        registrant:
+          $ref: '#/components/schemas/contact'
+        technical:
+          $ref: '#/components/schemas/contact'
+        admin:
+          $ref: '#/components/schemas/contact'
+
+    contact:
+      type: object
+      title: Contact
+      properties:
+        type:
+          type: string
+          enum: [USER_DATA, HOSTMASTER]
+        postalInfo:
+          $ref: '#/components/schemas/postalInfo'
+        voice:
+          description: Voice number must be in E.164 international telephone numbers Country code (max 3 digits) followed by subscriber number (max 12 digits)
+          type: string
+        fax:
+          description: Fax number must be in E.164 international telephone numbers Country code (max 3 digits) followed by subscriber number (max 12 digits)
+          type: string
+        email:
+          type: string
+        extensions:
+          $ref: '#/components/schemas/contactExtensions'
+
+    contactExtensions:
+      type: object
+      title: Contact Extensions
+      description: |
+        Contact extensions - see 'Contacts' section description for more details
+      additionalProperties:
+        type: object
+
+    postalInfo:
+      title: Postal Info
+      type: object
+      description: |
+        Holds postal info for a contact.
+      properties:
+        name:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        organization:
+          type: string
+        address:
+          $ref:  '#/components/schemas/address'
+      required:
+        - address
+
+    address:
+      title: Address
+      type: object
+      description: |
+        Holds address info for a postalInfo.
+      properties:
+        streets:
+          type: array
+          items:
+            type: string
+        countryCode:
+          type: string
+          description: Contry code must be specified using ISO3166 standard
+          enum: [AT,BE,CZ,CY,DE,DK,ES,EE,FI,FR,GR,GB,HU,IE,IT,LT,LU,LV,MT,NL,PL,PT,SE,SK,SI,AX,GF,GI,GP,MQ,RE,RO,BG,IS,LI,NO]
+        postalCode:
+          type: string
+        state:
+          type: string
+        city:
+          type: string
+
+    authCodeRequest:
+      title: AuthCode Request
+      type: object
+      description: |
+        Empty json
+
+    domainStatusesRequest:
+      title: Domain Status Request
+      type: object
+      description: Map containg domainStatuses
+      properties:
+        domainStatuses:
+          description: |
+            Map containing domain statuses such as clientDeleteProhibited, clientHold, clientRenewProhibited, clientTransferProhibited, clientUpdateProhibited and their associated reasons
+          type: object
+          properties:
+            domainStatusName:
+              description: |
+                It can have any value from the following - clientDeleteProhibited, clientHold, clientRenewProhibited, clientTransferProhibited, clientUpdateProhibited
+              type: object
+              properties:
+                value:
+                  type: boolean
+                reasons:
+                  type: array
+                  items:
+                    properties:
+                      intent:
+                        type: string
+                        description: OPTIONAL - The intent of the status. If not specified, by default its value will be set to 'client_request'.
+
+    domainStatusesResponse:
+      title: Domain Statuses Response
+      type: object
+      description: |
+        Map containing domain statuses such as clientDeleteProhibited, clientHold, clientRenewProhibited, clientTransferProhibited, clientUpdateProhibited and their associated reasons
+      properties:
+        domainStatuses:
+          type: object
+          properties:
+            domainStatusName:
+              description: |
+                It can have any value from the following - clientDeleteProhibited, clientHold, clientRenewProhibited, clientTransferProhibited, clientUpdateProhibited
+              type: object
+              properties:
+                value:
+                  type: boolean
+                reasons:
+                  type: array
+                  items:
+                    properties:
+                      timestamp:
+                        type: string
+                        description: The date when the status has been set on the domain.
+                        format: 'date-time'
+                      dueDate:
+                        type: string
+                        description: OPTIONAL - The date until the specified reason applies. After this date, the status is no longer active and will be removed. If the last remaining reason of a status expires, the status will be removed from the domain.
+                        format: 'date-time'
+                      createdBy:
+                        type: string
+                        description: Who created the status.
+                      intent:
+                        type: string
+                        description: The reason for which the status has been set.
+
+
+    nameserver:
+      title: Nameserver
+      type: object
+      properties:
+        name:
+          type: string
+          description: nameserver
+        ipV4:
+          type: array
+          description: list of IPv4 addresses
+          items:
+            type: string
+        ipV6:
+          type: array
+          description: list of IPv6 addresses. Any IPv6 format (long, short, normalized) is accepted
+          items:
+            type: string
+
+    nameservers:
+      title: Nameservers
+      type: array
+      description: list of nameservers
+      items:
+        $ref: '#/components/schemas/nameserver'
+
+    disablePrivacy:
+      title: Disable Privacy Request
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          description: disable domain privacy by setting to 'false'
+
+    dnsSec:
+      title: DNSSec
+      type: object
+      properties:
+        secDns:
+          $ref: '#/components/schemas/dnsSecEntity'
+
+    dnsSecEntity:
+      title: DNSSec Entity
+      type: object
+      description: |
+        DNS Security information. As per https://tools.ietf.org/html/rfc5910#section-3.3
+        - maxSigLife
+        - List of dsData
+        - List of keyData
+      properties:
+        dsData:
+          type: array
+          items:
+            $ref: '#/components/schemas/dsData'
+        keyData:
+          type: array
+          items:
+            $ref: '#/components/schemas/keyData'
+
+    dsData:
+      description: |
+        The digest type - digestType - field in the model identifies the
+        cryptographic digest algorithm used by the resource record.  The
+        following table lists the currently defined digest algorithm types.
+        Value | Algorithm | Status
+        ----- | --------  | -----
+        0     | Reserved  |  -
+        1     | SHA-1     | MANDATORY
+        2-255 | Unassigned|  -
+
+        The Algorithm field - alg - identifies the public key's cryptographic algorithm and determines the format of the Public Key field
+        The DNSKEY, RRSIG, and DS RRs use an 8-bit number to identify the
+        security algorithm being used.  These values are stored in the
+        "Algorithm number" field in the resource record RDATA.
+
+        Some algorithms are usable only for zone signing (DNSSEC), some only
+        for transaction security mechanisms (SIG(0) and TSIG), and some for
+        both.  Those usable for zone signing may appear in DNSKEY, RRSIG, and
+        DS RRs.  Those usable for transaction security would be present in
+        SIG(0) and KEY RRs, as described in [RFC 2931].
+
+        Value | Algorithm
+        ----- | --------
+        0     | reserved
+        1     | RSA/MD5 [RSAMD5]
+        2     | Diffie-Hellman [DH]
+        3     | DSA/SHA-1 [DSA]
+        4     | Elliptic Curve [ECC]
+        5     | RSA/SHA-1 [RSASHA1]
+        252   | Indirect [INDIRECT]
+        253   | Private [PRIVATEDNS]
+        254   | Private [PRIVATEOID]
+        255   | reserved
+        6 - 251  Available for assignment by IETF Standards Action.
+
+      title: DsData
+      type: object
+      properties:
+        digest:
+          description: The DS record refers to a DNSKEY RR by including a digest of that DNSKEY RR.The digest is calculated by concatenating the canonical form of the fully qualified owner name of the DNSKEY RR with the DNSKEY RDATA, and then applying the digest algorithm.
+          type: string
+        keyTag:
+          description: The Key Tag field contains the key tag value of the DNSKEY RR that validates this signature, in network byte order
+          type: integer
+        alg:
+          description: The Algorithm field identifies the public key's cryptographic algorithm and determines the format of the Public Key field
+          type: integer
+          enum: [0,1,2,3,4,5,252,253,254,255]
+        digestType:
+          description: The cryptographic digest algorithm used by the resource record
+          type: integer
+          enum: [0,1,2-255]
+        keyData:
+          $ref: '#/components/schemas/keyData'
+
+    keyData:
+      title: KeyData
+      type: object
+      description: |
+        The Key Data Interface relies on the use of the <secDNS:keyData>
+        element for creates, adds, removes, and <domain:info> responses.  The
+        DS information is not provided by the client but is generated by the
+        server.  The attributes used for DS generation are based on server
+        policy, where only key data is passed between the client and the server.
+
+        The flags field - flags - can have bit 7 of the Flags field is the Zone Key flag.  If bit 7 has value 1,
+        then the DNSKEY record holds a DNS zone key, and the DNSKEY RR's
+        owner name MUST be the name of a zone.  If bit 7 has value 0, then
+        the DNSKEY record holds some other type of DNS public key and MUST
+        NOT be used to verify RRSIGs that cover RRsets.
+
+        Bit 15 of the Flags field is the Secure Entry Point flag, described
+        in [RFC3757].  If bit 15 has value 1, then the DNSKEY record holds a
+        key intended for use as a secure entry point.  This flag is only
+        intended to be a hint to zone signing or debugging software as to the
+        intended use of this DNSKEY record; validators MUST NOT alter their
+        behavior during the signature validation process in any way based on
+        the setting of this bit.  This also means that a DNSKEY RR with the
+        SEP bit set would also need the Zone Key flag set in order to be able
+        to generate signatures legally.  A DNSKEY RR with the SEP set and the
+        Zone Key flag not set MUST NOT be used to verify RRSIGs that cover RRsets.
+        Bits 0-6 and 8-14 are reserved: these bits MUST have value 0 upon
+        creation of the DNSKEY RR and MUST be ignored upon receipt.
+
+        The Algorithm field - alg - identifies the public key's cryptographic algorithm and determines the format of the Public Key field
+        The DNSKEY, RRSIG, and DS RRs use an 8-bit number to identify the
+        security algorithm being used.  These values are stored in the
+        "Algorithm number" field in the resource record RDATA.
+
+        Some algorithms are usable only for zone signing (DNSSEC), some only
+        for transaction security mechanisms (SIG(0) and TSIG), and some for
+        both.  Those usable for zone signing may appear in DNSKEY, RRSIG, and
+        DS RRs.  Those usable for transaction security would be present in
+        SIG(0) and KEY RRs, as described in [RFC 2931].
+
+        Value | Algorithm
+        ----- | --------
+        0     | reserved
+        1     | RSA/MD5 [RSAMD5]
+        2     | Diffie-Hellman [DH]
+        3     | DSA/SHA-1 [DSA]
+        4     | Elliptic Curve [ECC]
+        5     | RSA/SHA-1 [RSASHA1]
+        252   | Indirect [INDIRECT]
+        253   | Private [PRIVATEDNS]
+        254   | Private [PRIVATEOID]
+        255   | reserved
+        6 - 251  Available for assignment by IETF Standards Action.
+      properties:
+        flags:
+          type: integer
+          description: flags field
+          enum: [256,257]
+        protocol:
+          type: integer
+          description: The Protocol Field MUST have value 3, and the DNSKEY RR MUST be
+            treated as invalid during signature verification if it is found to be
+            some value other than 3
+          default: 3
+        alg:
+          description: The Algorithm field identifies the public key's cryptographic
+            algorithm and determines the format of the Public Key field.
+          type: integer
+        pubKey:
+          type: string
+          description: The Public Key Field holds the public key material.  The format
+            depends on the algorithm of the key being stored and is described in
+            separate documents.
+
+    requestId:
+      title: Request Id
+      type: object
+      description: The id of the processed request.
+      properties:
+        id:
+          type: string
+
+    requestResponse:
+      title: Request Response
+      type: object
+      description: |
+        Status of request.
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, RUNNING, FINISHED, FAILED, CANCELLED, EMAIL_VERIFICATION_PENDING, EMAIL_VERIFICATION_SUCCESS]
+        type:
+          type: string
+          enum: [UPDATE_CONTACTS, UPDATE_NAMESERVERS, UPDATE_STATUSES, UPDATE_PRIVACY, UPDATE_DNSSEC, GENERATE_AUTHCODE]
+        details:
+          type: string
+        errors:
+          type: string
+
+    domainNameValidationRequest:
+      title: Domain Name Validation Request
+      type: array
+      description: List of domain names to be validated
+
+    tldInfo:
+      title: TLD Information Response
+      type: object
+      description: |
+        Information regarding supported features of a specific TLD
+      properties:
+        privateRegistrationSupported:
+          type: boolean
+          description: flag regarding the private registration feature of the domains which allows contact data to remain private
+        idnSupported:
+          type: boolean
+          description: flag which allows IDN domain names to be registered with that specific TLD
+        authInfoSupported:
+          type: boolean
+          description: flag describing if authInfo is supported by the registry
+        authInfoChangeSupported:
+          type: boolean
+          description: flag showing if authInfo can be changed
+        autorenewSupported:
+          type: boolean
+          description: flag regarding the autorenew feature which automatically enables the renew of the domain after expiration date
+        renewSupported:
+          type: boolean
+          description: flag showing if a domain with that specific TLD can be renewed
+        transferSupported:
+          type: boolean
+          description: flag showing if a domain with that specific TLD can be transferred
+        restoreSupported:
+          type: boolean
+          description: flag showing if a domain with that specific TLD can be restored
+        emailVerificationRequired:
+          type: boolean
+          description: flag describing if a change in registrant data will need the client's confirmation regarding the validity of his email address in order to be applied
+        updateNameserverSupported:
+          type: boolean
+          description: flag showing if domain's nameservers can be updated
+        glueNameserverSupported:
+          type: boolean
+          description: flag showing if glue nameservers can be created using a domain with that specific TLD
+        dnsSecSupported:
+          type: boolean
+          description: flag showing if the TLD supports DNSSec
+        dnsSecInterface:
+          type: string
+          enum: [dsData, keyData]
+          description: flag which describes which DNSSec interface is supported by the registry
+        clientTransferProhibitedSupported:
+          type: boolean
+          description: flag showing if the clientTransferProhibited status is supported for the domain
+        clientRenewProhibitedSupported:
+          type: boolean
+          description: flag showing if the clientRenewProhibited status is supported for a domain
+        clientUpdateProhibitedSupported:
+          type: boolean
+          description: flag showing if the clientUpdateProhibited status is supported for a domain
+        clientDeleteProhibitedSupported:
+          type: boolean
+          description: flag showing if the clientDeleteProhibited status is supported for a domain
+        clientHoldSupported:
+          type: boolean
+          description: flag showing if the clientHold status is supported for a domain
+        contactTypesSupported:
+          description: list of contact types supported by the registry
+          type: array
+          items:
+            type: string
+            enum: [registrant, technical, admin]
+
+    error:
+      title: Error
+      description: Generic error model
+      type: object
+      properties:
+        code:
+          description: The error code.
+          type: string
+          enum: [BAD_REQUEST, UNAUTHORIZED, INTERNAL_SERVER_ERROR, NOT_FOUND, INVALID_VALUE, FORBIDDEN]
+        fields:
+          description: List of request payload fields causing the error
+          type: array
+          items:
+            type: string
+        parameters:
+          description: List of query parameters causing the error
+          type: array
+          items:
+            type: string
+        message:
+          type: string
+          description: The error message.
+
+    validationError:
+      title: Validation Error
+      description: Validation error model
+      type: object
+      properties:
+        code:
+          description: The error code.
+          type: string
+        fields:
+          description: List of  fields causing the error
+          type: array
+          items:
+            type: string
+
+  examples:
+    id:
+      value:
+        {
+          "id": "22af3414abbe9e115df566fbe8e334b4"
+        }
+
+    Domains:
+      value:
+        {
+          "count": 2,
+          "domains": [
+          {
+            "id": "22af3414-abbe-9e11-5df5-66fbe8e334b4",
+            "name": "example-zone.de",
+            "tld": "de"
+          },
+          {
+            "id": "50e3475a-6dd7-4486-bca9-4ec9c42bae1c",
+            "name": "example-zone-köln.de",
+            "tld": "de",
+            "encodedName": "xn--example-zone-kln-zwb.de"
+          }
+          ]
+        }
+
+    Domain:
+      value:
+        {
+          "id": "50e3475a-6dd7-4486-bca9-4ec9c42bae1c",
+          "name": "example-zone-köln.de",
+          "encodedName": "xn--example-zone-kln-zwb.de",
+          "tld": "com",
+          "authInfo": "ADs123#a!",
+          "privacyEnabled": false,
+          "domainLock": false,
+          "transferLock": true,
+          "autoRenew": true,
+          "expirationDate": "2021-03-02T15:27:02.000Z",
+          "dnsSecEnabled": false
+        }
+
+    DomainStatusesResponse:
+      value:
+        {
+          "domainStatuses": {
+            "clientTransferProhibited": {
+              "value": true,
+              "reasons": [
+              {
+                "timestamp": "2020-02-28T09:40:55.280Z",
+                "createdBy": "client",
+                "intent": "client_request"
+              }
+              ]
+            }
+          }
+        }
+
+    DomainStatusesRequest:
+      value:
+        {
+          "domainStatuses": {
+            "clientUpdateProhibited": {
+              "value": "true",
+              "reasons": [
+              {
+                "intent": "test1"
+              }
+              ]
+            },
+            "clientDeleteProhibited": {
+              "value": "true",
+              "reasons": [
+              {
+                "intent": "test2"
+              }
+              ]
+            }
+          }
+        }
+
+    Contacts:
+      value:
+        {
+          "registrant": {
+            "type": "USER_DATA",
+            "postalInfo": {
+              "name": "Jan Developer",
+              "firstName": "Jan",
+              "lastName": "Developer",
+              "salutation": "f",
+              "address": {
+                "streets": [
+                  "5 de febrero Oriente"
+                ],
+                "countryCode": "DE",
+                "postalCode": "00501",
+                "city": "Monterrey"
+              }
+            },
+            "voice": "+49.721913747660",
+            "email": "jandeveloper.qahosting@1and1.ro"
+          },
+          "technical": {
+            "type": "HOSTMASTER",
+            "postalInfo": {
+              "name": "Hostmaster Schlund",
+              "lastName": "Hostmaster Schlund",
+              "organization": "1&1 Internet AG",
+              "address": {
+                "streets": [
+                  "Brauerstr. 48"
+                ],
+                "countryCode": "DE",
+                "postalCode": "76135",
+                "city": "Karlsruhe"
+              }
+            },
+            "voice": "+49.721913747660",
+            "fax": "+49.72191374246",
+            "email": "domaindevnull@1und1.de"
+          },
+          "admin": {
+            "type": "USER_DATA",
+            "postalInfo": {
+              "name": "Jan Developer",
+              "firstName": "Jan",
+              "lastName": "Developer",
+              "salutation": "f",
+              "address": {
+                "streets": [
+                  "5 de febrero Oriente"
+                ],
+                "countryCode": "DE",
+                "postalCode": "00501",
+                "city": "Monterrey"
+              }
+            },
+            "voice": "+49.721913747660",
+            "email": "jandeveloper.qahosting@1and1.ro"
+          }
+        }
+    UpdateContacts:
+      value:
+        {
+          "registrant": {
+            "type": "USER_DATA",
+            "postalInfo": {
+              "name": "Jan Developer",
+              "firstName": "Jan",
+              "lastName": "Developer",
+              "salutation": "f",
+              "address": {
+                "streets": [
+                  "5 de febrero Oriente"
+                ],
+                "countryCode": "DE",
+                "postalCode": "00501",
+                "city": "Monterrey"
+              }
+            },
+            "voice": "+49.721913747660",
+            "email": "jandeveloper.qahosting@1and1.ro"
+          },
+          "technical": {
+            "type": "USER_DATA",
+            "postalInfo": {
+              "name": "Hostmaster Schlund",
+              "lastName": "Hostmaster Schlund",
+              "organization": "1&1 Internet AG",
+              "address": {
+                "streets": [
+                  "Brauerstr. 48"
+                ],
+                "countryCode": "DE",
+                "postalCode": "76135",
+                "city": "Karlsruhe"
+              }
+            },
+            "voice": "+49.721913747660",
+            "fax": "+49.72191374246",
+            "email": "domaindevnull@1und1.de"
+          },
+          "admin": {
+            "type": "USER_DATA",
+            "postalInfo": {
+              "name": "Jan Developer",
+              "firstName": "Jan",
+              "lastName": "Developer",
+              "salutation": "f",
+              "address": {
+                "streets": [
+                  "5 de febrero Oriente"
+                ],
+                "countryCode": "DE",
+                "postalCode": "00501",
+                "city": "Monterrey"
+              }
+            },
+            "voice": "+49.721913747660",
+            "email": "jandeveloper.qahosting@1and1.ro"
+          }
+        }
+
+    DnsSec:
+      value:
+        {
+          "secDns": {
+            "dsData": [
+            {
+              "digest": "ba198ff315c8a9a9b8f5d3d027ed2edc547626a0",
+              "keyTag": 12091,
+              "alg": 8,
+              "digestType": 1
+            }
+            ]
+          }
+        }
+
+    DnsSecRequest:
+      value:
+        {
+          "secDns": {
+            "dsData": [
+            {
+              "digest": "ba198ff315c8a9a9b8f5d3d027ed2edc547626a0",
+              "keyTag": 12091,
+              "alg": 8,
+              "digestType": 1
+            }
+            ]
+          }
+        }
+
+    Nameserver:
+      value:
+        {
+          "type": "DEFAULT",
+          "nameservers": [
+          {
+            "name": "ns1.asdasdsad.com",
+            "ipV4": ["172.16.254.1"],
+            "ipV6": ["2001:db8:85a3::8a2e:370:7334"]
+          },
+          {
+            "name": "ns1.asdasdsad.com"
+          }
+          ]
+        }
+
+    Nameservers-put-sample:
+      value:
+        {
+          "nameservers": [
+          {
+            "name": "server.name",
+            "ipV4": [
+              "127.0.0.1"
+            ],
+            "ipV6": [
+              "2001:db8:85a3::8a2e:370:7334"
+            ]
+          },
+          {
+            "name": "server.name",
+            "ipV4": [
+              "127.0.0.1"
+            ],
+            "ipV6": [
+              "2001:db8:85a3::8a2e:370:7334"
+            ]
+          }
+          ]
+        }
+
+    unauthorized-error:
+      value: [
+      {
+        "code": "UNAUTHORIZED",
+        "message": "The customer is not authorized to do this operation"
+      }
+      ]
+
+    internal-server-error:
+      value: [
+      {
+        "code": "INTERNAL_SERVER_ERROR",
+        "message": "Something went wrong. Please contact technical support"
+      }
+      ]
+
+    not-found-error:
+      value: [
+      {
+        "code": "NOT_FOUND",
+        "message": "Item not found"
+      }
+      ]
+
+    not-found-request-error:
+      value: [
+      {
+        "code": "NOT_FOUND",
+        "message": "Request not found"
+      }
+      ]
+
+    invalid-query-error:
+      value: [
+      {
+        "code": "BAD_REQUEST",
+        "parameters": [
+          "limit",
+          "offset"
+        ],
+        "message": "Illegal parameters value"
+      }
+      ]
+
+    invalid-contract-type:
+      value: [
+      {
+        "code": "BAD_REQUEST",
+        "parameters": [
+          "registrant.type"
+        ],
+        "message": "Type must be USER_DATA"
+      }
+      ]
+    invalid-contact:
+      value:
+        [
+        {
+          "code": "INVALID_VALUE",
+          "fields": [
+            "contacts.regc.email"
+          ]
+        }
+        ]
+
+    invalid-privacy-request:
+      value: [
+      {
+        "code": "BAD_REQUEST",
+        "parameters": [
+          "enabled"
+        ],
+        "message": "must be false"
+      }
+      ]
+
+    forbidden-name-servers:
+      value:
+        [
+        {
+          "code": "FORBIDDEN",
+          "parameters": [
+            "ns1240.ui-dns.de"
+          ],
+          "message": "Default nameservers are not allowed"
+        }
+        ]
+
+    disablePrivacyRequest:
+      value:
+        {
+          "enabled": false
+        }
+
+    forbidden-statuses:
+      value:
+        [
+        {
+          "code": "BAD_REQUEST",
+          "parameters": [
+            "randomStatus"
+          ],
+          "message": "Invalid statuses"
+        }
+        ]
+
+    authCodeRequest:
+      value:
+        {
+
+        }
+
+    requestStatusResponse:
+      value: {
+        "id": "123",
+        "status": "PENDING",
+        "type": "UPDATE_CONTACTS"
+      }
+
+    process-already-running:
+      value:
+        [
+        {
+          "code": "PROCESS_ALREADY_RUNNING",
+          "message": "A process of type UPDATE for the same domain is already in progress"
+        }
+        ]
+    process-already-running-authinfo:
+      value:
+        [
+        {
+          "code": "PROCESS_ALREADY_RUNNING",
+          "message": "A process of type GENERATE_AUTHINFO for the same domain is already in progress"
+        }
+        ]
+
+    invalid-domain-statuses:
+      value:
+        [
+        {
+          "code": "BAD_REQUEST",
+          "parameters": [
+            "domainStatuses"
+          ],
+          "message": "Field must not be empty"
+        }
+        ]
+    dnsSec-not-allowed:
+      value:
+        [
+        {
+          "code": "BAD_REQUEST",
+          "message": "DnsSec update is not allowed for domains with default nameservers"
+        }
+        ]
+    domainNameValidationRequest:
+      value:
+        [
+          "domainName.com", "otherDomainName.org"
+        ]
+    domain-name-validation-successful:
+      value:
+        {
+          "---.com": [
+          {
+            "code": "INVALID_VALUE_DOMAIN_LABEL_START_END_WITH_HYPHEN",
+            "fields": [
+              "name"
+            ]
+          }
+          ],
+          "dsa.org": []
+        }
+    domain-name-validation-bad-request:
+      value:
+        [
+        {
+          "code": "BAD_REQUEST",
+          "message": "Illegal parameters value"
+        }
+        ]
+    contacts-validation-successful:
+      value:
+        [
+        {
+          "code": "FIELD_REQUIRED",
+          "fields": [
+            "contacts.regc.postalInfo.address.streets[0]"
+          ]
+        },
+        {
+          "code": "FIELD_REQUIRED",
+          "fields": [
+            "contacts.regc.postalInfo.address.postalCode"
+          ]
+        },
+        {
+          "code": "FIELD_REQUIRED",
+          "fields": [
+            "contacts.regc.postalInfo.address.city"
+          ]
+        },
+        {
+          "code": "FIELD_REQUIRED",
+          "fields": [
+            "contacts.regc.postalInfo.address.countryCode"
+          ]
+        }
+        ]
+
+    tld-info-response:
+      value:
+        {
+          "privateRegistrationSupported": false,
+          "idnSupported": false,
+          "authInfoSupported": true,
+          "authInfoChangeSupported": false,
+          "autorenewSupported": true,
+          "renewSupported": true,
+          "transferSupported": true,
+          "restoreSupported": true,
+          "emailVerificationRequired": false,
+          "updateNameserverSupported": true,
+          "glueNameserverSupported": true,
+          "dnsSecSupported": true,
+          "dnsSecInterface": "keyData",
+          "clientTransferProhibitedSupported": true,
+          "clientRenewProhibitedSupported": false,
+          "clientUpdateProhibitedSupported": false,
+          "clientDeleteProhibitedSupported": false,
+          "clientHoldSupported": false,
+          "contactTypesSupported": [
+            "registrant",
+            "technical",
+            "admin"
+          ]
+        }
+    tld-info-not-found:
+      value:
+        [
+        {
+          "code": "NOT_FOUND",
+          "message": "TLD not found"
+        }
+        ]
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+
+# Apply the ApiKeyAuth globally to all operations
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /v1/domainitems:
+    get:
+      tags:
+        - Domains
+      description: |
+        Returns a list of all the domains on all customer's contracts.
+
+        The response is paginated and it contains a total count and a list of domains with maximum size equal to the 'limit' parameter value (if not set explicitly, limit takes the default value - see paramters description).
+        The number of items to be skipped from the result list can be set by using the 'offset' parameter (default value is 0 - see parameters description).
+        The domains retrieved have a small representation which contains only id, name, tld and encodedName in case of IDN domain names.
+
+        The response list can be filtered by setting the query paramters mentioned below.
+      parameters:
+        - in: query
+          name: offset
+          schema:
+            type: integer
+          description: The number of items to skip before starting to collect the result set. Default value is set to 0. This parameter should be positive or zero.
+        - in: query
+          name: limit
+          schema:
+            type: integer
+          description:  The numbers of items to return. By default, it is set to 100. This parameter should be greater than zero.
+        - in: query
+          name: tld
+          schema:
+            type: string
+          description: Query by tld
+        - in: query
+          name: label
+          schema:
+            type: string
+          description: Query by domain label (exact matching)
+        - in: query
+          name: labelPrefix
+          schema:
+            type: string
+          description: Query by domain label prefix
+        - in: query
+          name: labelSuffix
+          schema:
+            type: string
+          description: Query by domain label suffix
+      responses:
+        '200':
+          description: Succesful response. The customer's domains list is returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/domains"
+              examples:
+                Success:
+                  $ref: "#/components/examples/Domains"
+
+        '400':
+          description: Bad Request. Illegal parameters value.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/error"
+              examples:
+                Unauthorized:
+                  $ref: "#/components/examples/invalid-query-error"
+
+        '401':
+          description: Unauthorized request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/error"
+              examples:
+                Unauthorized:
+                  $ref: "#/components/examples/unauthorized-error"
+        '500':
+          description: Internal server error. Something went wrong while processing the request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/error"
+              examples:
+                InternalServerError:
+                  $ref: "#/components/examples/internal-server-error"
+
+  /v1/domainitems/{domainId}:
+    get:
+      tags:
+        - Domains
+      description: |
+        Returns details about a domain.
+
+        The domain retrieved as a response has a large representation, giving extra information such as domain's authcode, expiration date or if it has certain features enabled (Domain Privacy, Domain Lock, Transfer Lock, Autorenewal, DNS Security).
+      parameters:
+        - in: path
+          name: domainId
+          schema:
+            type: string
+          required: true
+          description: The ID of the domain
+      responses:
+        '200':
+          description: Succesful response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/domainLarge"
+              examples:
+                Success:
+                  $ref: "#/components/examples/Domain"
+        '401':
+          description: Unauthorized request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/error"
+              examples:
+                Unauthorized:
+                  $ref: "#/components/examples/unauthorized-error"
+        '404':
+          description: Domain not found.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/error"
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/not-found-error"
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/error"
+              examples:
+                InternalServerError:
+                  $ref: "#/components/examples/internal-server-error"
+
+  /v1/domainitems/{domainId}/contacts:
+    get:
+      tags:
+        - Contacts
+      description: |
+        Returns the locally stored contact details of a domain for registrant, technical and administrative contacts.
+        This means that this contact data may be different at the registry depending on the privacy settings of the domain. For Private Registration active, customer's real data is not sent at the registry, being replaced with predefined IONOS privacy data.
+
+        Note: For each contact there is specified a field ('type') which indicates what type of data a contact has. This can be 'USER_DATA' or 'HOSTMASTER'.
+          'USER_DATA' indicates customer contact details, while 'HOSTMASTER' contacts have IONOS predefined data and may appear only on the technical contact section.
+
+        Contacts may have different types of extenstions. Possible values can be seen below:
+        | Property name          	| Type / Values 	| Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   	|
+        |------------------------	|---------------	|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------	|
+        | us_appl_purpose        	| see below     	|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               	|
+        |                        	| P1            	| Business for Profit                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           	|
+        |                        	| P2            	| Non-profit business, club, association, religious                                                                                                                                                                                                                                                                                                                                                                                                                                                             	|
+        |                        	| P3            	| Personal use                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  	|
+        |                        	| P4            	| Educational purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           	|
+        |                        	| P5            	| Government purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            	|
+        | us_nexus_cat           	| see below     	|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               	|
+        |                        	| C11           	| A natural person who is a US citizen                                                                                                                                                                                                                                                                                                                                                                                                                                                                          	|
+        |                        	| C12           	| A natural person who is a permanent resident of the USA or any of its possessions or territories                                                                                                                                                                                                                                                                                                                                                                                                              	|
+        |                        	| C21           	| <br>An entity or organization that is(i) incorporated within one of the  50 US states,<br><br> the District of Columbia,or any of the US possessions or  territories, or(ii) organized or otherwise constituted under<br><br> the laws of  a state of the United States of America, the District of Columbia or  any of its possessions or territories<br> (including federal, state, or  local government of the US, or a political subdivision thereof, and  non-commercial organizations based in the US.) 	|
+        |                        	| C31           	| <br><br>A foreign organization that regularly engages in lawful activities  (sales of goods or services or<br><br> other business, commercial, or  non-commercial, including not for profit relations) in the US.<br>The CC  equals to the country code of the organization.                                                                                                                                                                                                                                  	|
+        |                        	| C32           	| An organization has an office or other facility in the US. The CC equals to the country code of the organization.                                                                                                                                                                                                                                                                                                                                                                                             	|
+        | us_nexus_cc            	| string        	| country codes (CA, US, etc)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   	|
+        | uk_regc_type           	| string        	| <br>The type of the registrant. Possible values: <br><br>PTNR, STRA, OTHER,  FCORP, FOTHER, RCHAR, FIND, IP, GOV, STAT, CRC, UNKNOWN, LTD, PLC, LLP,  SCH, IND.                                                                                                                                                                                                                                                                                                                                               	|
+        | uk_regc_co_no          	| string        	|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               	|
+        | uk_regc_trad_name      	| string        	|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               	|
+        | uk_whois_opt_out       	| integer       	|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               	|
+        | fr_date_of_birth       	| date          	|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               	|
+        | fr_place_of_birth      	| string        	|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               	|
+        | fr_whois_opt_in        	| string        	|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               	|
+        | es_legal_type          	| string        	|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               	|
+        | es_ident               	| string        	|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               	|
+        | ca_cpr                 	| see below     	|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               	|
+        |                        	| CCO           	| Corporation                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   	|
+        |                        	| CCT           	| Canadian citizen                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              	|
+        |                        	| RES           	| Permanent resident of Canada                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  	|
+        |                        	| ABO           	| Aboriginal Peoples (individuals or groups) indigenous to Canada                                                                                                                                                                                                                                                                                                                                                                                                                                               	|
+        |                        	| ASS           	| Canadian Unincorporated Association                                                                                                                                                                                                                                                                                                                                                                                                                                                                           	|
+        |                        	| EDU           	| Canadian Educational institution                                                                                                                                                                                                                                                                                                                                                                                                                                                                              	|
+        |                        	| GOV           	| Government or government entity in Canada                                                                                                                                                                                                                                                                                                                                                                                                                                                                     	|
+        |                        	| HOP           	| Canadian Hospital                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             	|
+        |                        	| INB           	| Indian Band recognized of a Canadian Citizen or Permanent Resident                                                                                                                                                                                                                                                                                                                                                                                                                                            	|
+        |                        	| LAM           	| Canadian Library, Archive or Museum                                                                                                                                                                                                                                                                                                                                                                                                                                                                           	|
+        |                        	| PLT           	| Canadian Political party                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      	|
+        |                        	| PRT           	| Partnership registered in Canada                                                                                                                                                                                                                                                                                                                                                                                                                                                                              	|
+        |                        	| TRD           	| Canadian Trade union                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          	|
+        | ca_language            	| string        	| a lowercase language abreviation (eg. “en”)                                                                                                                                                                                                                                                                                                                                                                                                                                                                   	|
+        | ca_originating_ip      	| string        	| a valid IPv4 address                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          	|
+        | ca_whois_opt_out       	| integer       	| 0 for false or 1(valid only with ca_cpr=CCT, RES or ABO for true)                                                                                                                                                                                                                                                                                                                                                                                                                                             	|
+        | pl_nip                 	| string        	|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               	|
+        | pl_pesel               	| string        	|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               	|
+        | pl_regon               	| string        	|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               	|
+        | pl_whois_opt_out       	| string        	|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               	|
+        | it_vat_number          	| string        	|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               	|
+        | it_id_number           	| string        	|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               	|
+        | it_entity_type         	| string        	|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               	|
+        | it_cfa                 	| string        	|                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               	|
+        | eu_natural_person      	| string        	| String value of boolean that is true if the contact is a natural person, false otherwise                                                                                                                                                                                                                                                                                                                                                                                                                      	|
+        | eu_citizenship_country 	| string        	| <br>Holds the country code for a natural person, not present if the  contact is not a natural person. <br><br>The possible values for this extension  are: AT, BE, CZ, CY, DE, DK, ES, EE, FI, FR, GR, GB, HU, IE, IT, LT, LU, <br><br> LV, MT, NL, PL, PT, SE, SK, SI, AX, GF, GI, GP, MQ, RE, RO, BG, IS, LI,  NO.                                                                                                                                                                                          	|
+
+      parameters:
+        - in: path
+          name: domainId
+          schema:
+            type: string
+          required: true
+          description: The ID of the domain
+      responses:
+        '200':
+          description: Succesful response.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/contact"
+              examples:
+                Success:
+                  $ref: "#/components/examples/Contacts"
+        '401':
+          description: Unauthorized request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                Unauthorized:
+                  $ref: "#/components/examples/unauthorized-error"
+        '404':
+          description: Domain not found.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/not-found-error"
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                InternalServerError:
+                  $ref: "#/components/examples/internal-server-error"
+    put:
+      tags:
+        - Contacts
+      description: |
+        Update domain's contacts.
+
+        Supports updates on different kinds of contacts on the same request (registrant, technical, admin), but only with 'USER_DATA' type.
+        The fields are validated and in case of invalid formats an error will be returned.
+        Full data is required as per individual contact section (registrant, technical, admin), but specifying all three sections is not mandatory (only the ones which are wanted to be updated can be sent on the request, the rest can be omitted).
+        Some TLDs do not support all three contact types. In this case, if an unsupported contact type is sent on the request body, it will be ignored.
+        In case of gTLDs, when registrant email is changed, an email verification process will pe triggered and the contact update will be successfully finished only if the new email address is confirmed as valid by clicking the activation link received in inbox.
+        If Privacy is enabled, only IONOS internal record of contact data is updated. Contact data at the registry remains the same, as Privacy feature remains active.
+
+      parameters:
+        - in: path
+          name: domainId
+          schema:
+            type: string
+          required: true
+          description: The ID of the domain
+      requestBody:
+        description: Update contacts
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/contacts"
+            examples:
+              UpdateContacts:
+                $ref: '#/components/examples/UpdateContacts'
+      responses:
+        '200':
+          description: Succesful response.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/requestId"
+              examples:
+                Success:
+                  $ref: "#/components/examples/id"
+        '400':
+          description: Bad Request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                InvalidContact:
+                  $ref: '#/components/examples/invalid-contact'
+                ForbiddenContractType:
+                  $ref: "#/components/examples/invalid-contract-type"
+        '401':
+          description: Unauthorized request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                Unauthorized:
+                  $ref: "#/components/examples/unauthorized-error"
+        '403':
+          description: Forbidden request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                ProcessAlreadyRunning:
+                  $ref: "#/components/examples/process-already-running"
+
+        '404':
+          description: Domain not found.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/not-found-error"
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                InternalServerError:
+                  $ref: "#/components/examples/internal-server-error"
+
+
+  /v1/domainitems/{domainId}/nameservers:
+    get:
+      tags:
+        - Nameservers
+      description: |
+        Returns details about domain's nameservers.
+
+        The response is a list of nameservers containing the hostname for each nameserver and optionally the IPv4 and IPv6 addresses (the addresses are usually retrieved in case of glue nameservers).
+
+        The 'type' field indicates if all the hosts are IONOS default nameservers ('DEFAULT') or if there are custom nameservers set on the domain's zone ('CUSTOM').
+      parameters:
+        - in: path
+          name: domainId
+          schema:
+            type: string
+          required: true
+          description: The ID of the domain
+      responses:
+        '200':
+          description: Succesful response.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/nameserver"
+              examples:
+                Success:
+                  $ref: "#/components/examples/Nameserver"
+        '401':
+          description: Unauthorized request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                Unauthorized:
+                  $ref: "#/components/examples/unauthorized-error"
+        '404':
+          description: Domain not found.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/not-found-error"
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                InternalServerError:
+                  $ref: "#/components/examples/internal-server-error"
+    put:
+      tags:
+        - Nameservers
+      description: |
+        Update customer's domain nameservers.
+
+        Currently only updates with all CUSTOM nameservers are supported. No default nameserver is allowed on the update request input.
+
+        Note: IPv4 and IPv6 addresses are optional.
+      parameters:
+        - in: path
+          name: domainId
+          schema:
+            type: string
+          required: true
+          description: The ID of the domain
+      requestBody:
+        description: Custom nameservers list
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/nameservers"
+            examples:
+              sample-nameservers:
+                $ref: '#/components/examples/Nameservers-put-sample'
+      responses:
+        '202':
+          description: Succesful response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/requestId"
+              examples:
+                Success:
+                  $ref: "#/components/examples/id"
+        '401':
+          description: Unauthorized request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                Unauthorized:
+                  $ref: "#/components/examples/unauthorized-error"
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                ForbiddenNameservers:
+                  $ref: "#/components/examples/forbidden-name-servers"
+                ProcessAlreadyRunning:
+                  $ref: "#/components/examples/process-already-running"
+        '404':
+          description: Domain not found.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/not-found-error"
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                InternalServerError:
+                  $ref: "#/components/examples/internal-server-error"
+
+  /v1/domainitems/{domainId}/statuses:
+    get:
+      tags:
+        - Domain Statuses
+      description: |
+        Returns the following domain statuses and their associated reason, if present:
+        - clientDeleteProhibited
+        - clientHold
+        - clientRenewProhibited
+        - clientTransferProhibited
+        - clientUpdateProhibited
+
+        For each reason there is an 'intent' field which can be provided by the customer in order to give details about the necessity of that specific status. If not provided, the intent will be autocompleted with 'client_request'.
+
+        There are some intents managed by the IONOS platform such as:
+        - EMAIL_VERIFICATION_EXPIRED - intent for clientTransferProhibited; it is set on the domain after 14 days if the client does not confirm that the e-mail address is valid by clicking the activation link received in inbox.
+        - OWNER_CHANGE_LOCK - intent for clientTransferProhibited; it is set on the domain after some registrant contact data is changed (e.g. name, organization, e-mail) and it is automatically removed after 60 days.
+        - DOMAINS_GUARD_LOCK - intent for clientTransferProhibited, clientUpdateProhibited, clientDeleteProhibited; it is set on the domain if it has Domain Guard activated.
+
+        Also, other intents can be set if there is any suspicious abusive activity detected on the domain.
+
+      parameters:
+        - in: path
+          name: domainId
+          schema:
+            type: string
+          required: true
+          description: The ID of the domain
+      responses:
+        '200':
+          description: Succesful response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/domainStatusesResponse"
+              examples:
+                Success:
+                  $ref: "#/components/examples/DomainStatusesResponse"
+        '401':
+          description: Unauthorized request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                Unauthorized:
+                  $ref: "#/components/examples/unauthorized-error"
+        '404':
+          description: Domain not found.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/not-found-error"
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                InternalServerError:
+                  $ref: "#/components/examples/internal-server-error"
+
+    put:
+      tags:
+        - Domain Statuses
+      description: |
+        Update domain statuses.
+
+        Statuses can be added, updated or removed using this endpoint.
+        Possible status which can be modified are:
+        - clientDeleteProhibited
+        - clientHold
+        - clientRenewProhibited
+        - clientTransferProhibited
+        - clientUpdateProhibited
+
+        For each status, a set of reasons with intent can be provided by the customer in order to give details about the necessity of that specific status. If not provided, the intent will be autocompleted with 'client_request'.
+
+        There are some intents managed by the IONOS platform such as:
+        - EMAIL_VERIFICATION_EXPIRED - intent for clientTransferProhibited; it is set on the domain after 14 days if the client does not confirm that the e-mail address is valid by clicking the activation link received in inbox.
+        - OWNER_CHANGE_LOCK - intent for clientTransferProhibited; it is set on the domain after some registrant contact data is changed (e.g. name, organization, e-mail) and it is automatically removed after 60 days.
+        - DOMAINS_GUARD_LOCK - intent for clientTransferProhibited, clientUpdateProhibited, clientDeleteProhibited; it is set on the domain if it has Domain Guard activated.
+
+        Also, other intents can be set if there is any suspicious abusive activity detected on the domain.
+
+        For removing a status from the domain, customer can do this operation by setting the 'value' field to false and also giving the entire set of reasons for that specific status. If a status has multiple reasons attached and customer tries to disable it without specifying all the reasons, the status will still remain set on the domain.
+      parameters:
+        - in: path
+          name: domainId
+          schema:
+            type: string
+          required: true
+          description: The ID of the domain
+      requestBody:
+        description: Domain statuses list
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/domainStatusesRequest"
+            examples:
+              update-domain-statuses:
+                $ref: '#/components/examples/DomainStatusesRequest'
+      responses:
+        '202':
+          description: Succesful response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/requestId"
+              examples:
+                Success:
+                  $ref: "#/components/examples/id"
+        '401':
+          description: Unauthorized request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                Unauthorized:
+                  $ref: "#/components/examples/unauthorized-error"
+        '400':
+          description: Bad Request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                ForbiddenStatuses:
+                  $ref: "#/components/examples/forbidden-statuses"
+                InvalidDomainStatuses:
+                  $ref: '#/components/examples/invalid-domain-statuses'
+        '403':
+          description: Forbidden request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                ProcessAlreadyRunning:
+                  $ref: "#/components/examples/process-already-running"
+
+        '404':
+          description: Domain not found.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/not-found-error"
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                InternalServerError:
+                  $ref: "#/components/examples/internal-server-error"
+
+  /v1/domainitems/{domainId}/dnssec:
+    get:
+      tags:
+        - DNS Security
+      description: Returns domain DNS Security feature information if present on customer's domain.
+      parameters:
+        - in: path
+          name: domainId
+          schema:
+            type: string
+          required: true
+          description: The ID of the domain
+      responses:
+        '200':
+          description: Succesful response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/dnsSec"
+              examples:
+                Success:
+                  $ref: "#/components/examples/DnsSec"
+        '401':
+          description: Unauthorized request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                Unauthorized:
+                  $ref: "#/components/examples/unauthorized-error"
+        '404':
+          description: Domain not found.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/not-found-error"
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                InternalServerError:
+                  $ref: "#/components/examples/internal-server-error"
+
+    put:
+      tags:
+        - DNS Security
+      description: |
+        Update DNSSec information on the domain.
+
+        Allowed only when DNS Security feature is supported by the registry and only for custom nameservers (nameservers which are not managed by IONOS platform).
+        For instance, if the domain has any IONOS default nameservers a DNSSec update will not be permitted.
+
+        The DNSSec interface supported for each TLD can be dsData or keyData, depending on the registry.
+        If the interface supported for a certain TLD is unknown, dsData can be sent with its associated keyData as a child object. So that way, the update will be successful regardless of the supported interface of the registry.
+
+        If the customer wants to remove any key, he can request a DNSSec update with that key omitted. Moreover, he has the posibility to remove all DNSSec data, by sending an empty 'secDns' object.
+
+      parameters:
+        - in: path
+          name: domainId
+          schema:
+            type: string
+          required: true
+          description: The ID of the domain
+      requestBody:
+        description: DnsSec list
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/dnsSec"
+            examples:
+              updateDnsSec:
+                $ref: '#/components/examples/DnsSecRequest'
+      responses:
+        '202':
+          description: Succesful response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/requestId"
+              examples:
+                Success:
+                  $ref: "#/components/examples/id"
+        '401':
+          description: Unauthorized request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                Unauthorized:
+                  $ref: "#/components/examples/unauthorized-error"
+        '400':
+          description: Bad Request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                DnsSecUpdateNotAllowed:
+                  $ref: "#/components/examples/dnsSec-not-allowed"
+        '403':
+          description: Forbidden request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                ProcessAlreadyRunning:
+                  $ref: "#/components/examples/process-already-running"
+
+        '404':
+          description: Domain not found.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/not-found-error"
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                InternalServerError:
+                  $ref: "#/components/examples/internal-server-error"
+
+
+  /v1/domainitems/{domainId}/privacy:
+    put:
+      tags:
+        - Privacy
+      description: |
+        Update Domain Privacy feature.
+
+        Currently only the requests for privacy disabling are supported (the 'enabled' field on the input is only allowed to be 'false').
+      parameters:
+        - in: path
+          name: domainId
+          schema:
+            type: string
+          required: true
+          description: The ID of the domain
+      requestBody:
+        description: Disable privacy feature
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/disablePrivacy"
+            examples:
+              Disable:
+                $ref: '#/components/examples/disablePrivacyRequest'
+      responses:
+        '202':
+          description: Succesful response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/requestId"
+              examples:
+                Success:
+                  $ref: "#/components/examples/id"
+        '401':
+          description: Unauthorized request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                Unauthorized:
+                  $ref: "#/components/examples/unauthorized-error"
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                Unauthorized:
+                  $ref: "#/components/examples/invalid-privacy-request"
+        '403':
+          description: Forbidden request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                ProcessAlreadyRunning:
+                  $ref: "#/components/examples/process-already-running"
+
+        '404':
+          description: Domain not found.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/not-found-error"
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                InternalServerError:
+                  $ref: "#/components/examples/internal-server-error"
+
+  /v1/domainitems/{domainId}/authcode:
+    put:
+      tags:
+        - AuthCode
+      description: |
+        Generate a new authCode.
+
+        Allowed only when registry supports this operation.
+      parameters:
+        - in: path
+          name: domainId
+          schema:
+            type: string
+          required: true
+          description: The ID of the domain
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/authCodeRequest"
+            examples:
+              Disable:
+                $ref: '#/components/examples/authCodeRequest'
+      responses:
+        '202':
+          description: Succesful response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/requestId"
+              examples:
+                Success:
+                  $ref: "#/components/examples/id"
+        '401':
+          description: Unauthorized request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                Unauthorized:
+                  $ref: "#/components/examples/unauthorized-error"
+        '403':
+          description: Forbidden request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                ProcessAlreadyRunning:
+                  $ref: "#/components/examples/process-already-running-authinfo"
+        '404':
+          description: Domain not found.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/not-found-error"
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {
+                  $ref: "#/components/schemas/error"
+                }
+              examples:
+                InternalServerError:
+                  $ref: "#/components/examples/internal-server-error"
+
+
+  /v1/requests/{requestId}:
+    get:
+      tags:
+        - Requests
+      description: |
+        Returns information about a previously submitted request.
+
+        A request can be in one of the following states:
+        - PENDING (immediately after the request passes validation)
+        - RUNNING (after an update process has started)
+        - EMAIL_VERIFICATION_PENDING (in case there is a contact email update which is waiting to be verified)*
+        - EMAIL_VERIFICATION_SUCCESS (immediately after the email address is confirmed to be valid)*
+        - FINISHED/FAILED/CANCELLED (in case of successful, unsuccessful or cancelled update processes)
+
+        Note* when there are changes regarding a contact's email address, an activation link will be sent on that email address waiting to be confirmed by the user. If this does not happen, the contact update process will fail, showing on 'details' an 'Email verification timeout' as reason for the failure.
+      parameters:
+        - in: path
+          name: requestId
+          schema:
+            type: string
+          required: true
+          description: The ID of the request
+      responses:
+        '200':
+          description: Succesful response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/requestResponse"
+              examples:
+                Success:
+                  $ref: "#/components/examples/requestStatusResponse"
+        '401':
+          description: Unauthorized request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/error"
+              examples:
+                Unauthorized:
+                  $ref: "#/components/examples/unauthorized-error"
+        '404':
+          description: Request not found.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/error"
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/not-found-request-error"
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/error"
+              examples:
+                InternalServerError:
+                  $ref: "#/components/examples/internal-server-error"
+
+
+  /v1/validation/domains:
+    post:
+      tags:
+        - Validation
+      description: |
+        Returns a list of errors regarding the validation of domain names (bulk) if any
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/domainNameValidationRequest"
+            examples:
+              Disable:
+                $ref: '#/components/examples/domainNameValidationRequest'
+      responses:
+        '200':
+          description: Succesful response (it may contain the list of errors if any).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/validationError"
+              examples:
+                Success:
+                  $ref: "#/components/examples/domain-name-validation-successful"
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/error"
+              examples:
+                Unauthorized:
+                  $ref: "#/components/examples/domain-name-validation-bad-request"
+        '401':
+          description: Unauthorized request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/error"
+              examples:
+                Unauthorized:
+                  $ref: "#/components/examples/unauthorized-error"
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/error"
+              examples:
+                InternalServerError:
+                  $ref: "#/components/examples/internal-server-error"
+
+
+  /v1/validation/{tld}/contacts:
+    post:
+      tags:
+        - Validation
+      description: |
+        Returns a list of errors regarding the validation of contacts data if any
+
+      parameters:
+        - in: path
+          name: tld
+          schema:
+            type: string
+          required: true
+          description: The tld
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/contact"
+            examples:
+              Disable:
+                $ref: '#/components/examples/Contacts'
+      responses:
+        '200':
+          description: Succesful response (it may contain the list of errors if any).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/validationError"
+              examples:
+                Success:
+                  $ref: "#/components/examples/contacts-validation-successful"
+        '400':
+          description: Bad request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/error"
+              examples:
+                Unauthorized:
+                  $ref: "#/components/examples/domain-name-validation-bad-request"
+        '401':
+          description: Unauthorized request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/error"
+              examples:
+                Unauthorized:
+                  $ref: "#/components/examples/unauthorized-error"
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/error"
+              examples:
+                InternalServerError:
+                  $ref: "#/components/examples/internal-server-error"
+
+  /v1/tlds/{tld}:
+    get:
+      tags:
+        - TLDs
+      description: |
+        Returns TLD specific information (e.g. private registration, DNSSec, IDN, locks, operations, contact types supported)
+
+      parameters:
+        - in: path
+          name: tld
+          schema:
+            type: string
+          required: true
+
+      responses:
+        '200':
+          description: Succesful response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/tldInfo"
+              examples:
+                Success:
+                  $ref: "#/components/examples/tld-info-response"
+
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/error"
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/tld-info-not-found"
+        '401':
+          description: Unauthorized request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/error"
+              examples:
+                Unauthorized:
+                  $ref: "#/components/examples/unauthorized-error"
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/error"
+              examples:
+                InternalServerError:
+                  $ref: "#/components/examples/internal-server-error"

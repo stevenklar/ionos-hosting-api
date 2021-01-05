@@ -1,0 +1,333 @@
+openapi: 3.0.1
+info:
+  title: SSL API
+  description: |-
+    # Working with the API
+    Every endpoint uses the `X-API-Key` header for authorization, to obtain the key please see the [Official Documentation](/docs/getstarted).
+
+    This SSL API version only supports DV certificates. SSL Unlimited (Flat) is not supported in the current beta.
+
+    # Support
+    Support questions may be posted in English: <a href='/docs/getstarted#support'>API Beta Support</a>.
+
+    Please note that in the Beta phase we offer support in the business Hours Mo-Fri 9:00-17:00 EET.
+  contact:
+    name: API Beta Support
+    url: '/docs/getstarted#support'
+  version: 1.0.0
+servers:
+  - url: 'https://api.hosting.ionos.com/ssl'
+    description: Production server
+    variables: {}
+paths:
+  /v1/certificates:
+    get:
+      tags:
+        - Certificates
+      summary: Get certificates
+      description: Retrieve the details for all the certificates in the current customer account.
+      operationId: getCertificates
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 1
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 50
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Certificate'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        - X-API-Key: []
+    post:
+      tags:
+        - Certificates
+      summary: Create a new certificate
+      description: |-
+        Request a new certificate. This requires that there is an unused SSL certificate of the respective type already purchased within the customer account. Creating a certificate is an asynchronous operation. Currently, the supported method for getting the completed state is by polling operations (see GET /v1/certificates/{id}).
+
+        The DV authentication method is automatically selected based on the provided common name. `FILE` and `DNS` methods are preferred. When `EMAIL` authentication is selected,  Digicert sends an email to the email address of the hostmaster of your domain (i.e. hostmaster@example.com). You must confirm the request for the certificate via the link contained in the email.
+
+        The CSR must be supplied when the certificate installation is managed by you.
+         The CSR must use RSA with key size 2048 bits. On Linux, you can generate the CSR using OpenSSL:
+
+            openssl req -new -newkey rsa:2048 -nodes -keyout example.key -out example.csr -subj "/C=DE/CN=example.com"
+
+        The generated CSR will be formatted like in the following example:
+
+            -----BEGIN CERTIFICATE REQUEST-----
+            MIICaDCCAVACAQAwIzELMAkGA1UEBhMCREUxFDASBgNVBAMMC2V4YW1wbGUuY29t
+            MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1UWfeVKGB0ekYy3Yv2R6
+            tNJrwEQSIPVUkd0M+3LqEOYY3O2Hq3QQ7cbpsQEwPNXasTKmE/IbG89fDmiESfsp
+            v9goxkAs0CAD6G8/e7jNe8KMrYBPBV+tFx8DV5UubmBAqd7ahLK0+dDhFbmQAnbs
+            CkshE9e8yuaWKijLjr2BqiIWKR+pjCnWiBr4ApfT38vYt56ImhfNfQT/HKgxsYDO
+            x1AAorauzQ6Vko5VEKtaeLFemh7AKboCza6JuDDgSqj0c8TsdStu/ftOE05fErzf
+            HnJaQFfkQY+C5bo72tmtexrBXdZsGDQgvOpsE8497fmYoJ/A9D+C9udGyN9U64bM
+            QwIDAQABoAAwDQYJKoZIhvcNAQELBQADggEBAEHBXVLQBb5FqdEf1b7VDFeq7ZFN
+            zl61jbzefL5JcMA9wlPfJiT4nhxai3ueEHcH4mhyEvONzFBbB12TeS7GtEO9T21h
+            ZGXaok4UMy/XZrJXxw733BsJyEzacuzzBNbG9BP1xPfVrTWKfmsgnurCutlNXzuj
+            a0bjETgKV6QHJdB8hNWMNrpW4N6GyODBHZm0hPsQkEf4wDXnKMeO7OhQo4zOeZTn
+            ZR9WVxzcWfgQ7TQ5Od+mVJHc39WhMQlFzaDsHGmipJZYN/iIeP4LBymTnnM9N84K
+            z1N44/dwlIP2HxW9qjUMy+Ks6eymEAgHMeF3aym2qnPBWcd92Py7OFXZhxQ=
+            -----END CERTIFICATE REQUEST-----
+
+        For more details, you can consult the following guide from Digicert:  [How to create a CSR](https://www.digicert.com/csr-creation.htm).
+
+        When a CSR is not provided, the certificate is automatically installed on your IONOS managed website. An error will be raised if the common name is not associated with an website managed by IONOS.
+      operationId: createCertificate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollRequest'
+            examples:
+              SSL_STARTER request:
+                description: SSL_STARTER request
+                value:
+                  certificateType: SSL_STARTER
+                  commonName: example.com
+                  csr: |-
+                    -----BEGIN CERTIFICATE REQUEST-----
+                    MIICaDCCAVA...Wcd92Py7OFXZhxQ=
+                    -----END CERTIFICATE REQUEST-----
+        required: true
+      responses:
+        '202':
+          description: The request was accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Certificate'
+              examples:
+                SSL_STARTER response:
+                  description: SSL_STARTER response
+                  value:
+                    id: f21ca4ad-a840-4c3e-9e06-93a3c96d822a
+                    certificateType: SSL_STARTER
+                    authenticationMethod: FILE
+                    status: PENDING
+                    commonName: example.com
+                    links:
+                      - rel: self
+                        href: /v1/certificates/f21ca4ad-a840-4c3e-9e06-93a3c96d822a
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        - X-API-Key: []
+  '/v1/certificates/{id}':
+    get:
+      tags:
+        - Certificates
+      summary: Get certificate details
+      description: Retrieve the details for the certificate having the specified id. Use this operation to get the status of the certificate or the certificate itself after the certificate was issued.
+      operationId: getCertificateDetails
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Certificate'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Certificates
+      summary: Unassign
+      description: |-
+        Unassign the certificate having the specified id. After the operation completes the slot becomes available for creating a new certificate.
+
+        Note: The same restrictions as in Control Panel also apply for the API operation.
+      operationId: unassignCertificate
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Successful response
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        - X-API-Key: []
+components:
+  schemas:
+    EnrollRequest:
+      required:
+        - certificateType
+        - commonName
+      type: object
+      properties:
+        certificateType:
+          type: string
+          enum:
+            - SSL_STARTER
+            - SSL_STARTER_WILDCARD
+            - SSL_BUSINESS
+            - SSL_BUSINESS_WILDCARD
+            - SSL_PREMIUM
+        commonName:
+          type: string
+        csr:
+          type: string
+    CaCertificate:
+      type: object
+      properties:
+        type:
+          type: string
+        certificate:
+          type: string
+    Certificate:
+      type: object
+      properties:
+        id:
+          type: string
+        certificateType:
+          type: string
+          enum:
+            - SSL_STARTER
+            - SSL_STARTER_WILDCARD
+            - SSL_BUSINESS
+            - SSL_BUSINESS_WILDCARD
+            - SSL_PREMIUM
+        authenticationMethod:
+          type: string
+          enum:
+            - DNS
+            - FILE
+            - EMAIL
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - PENDING
+            - REPLACING
+            - RENEWING
+            - PENDING_CA_MANUAL_VETTING
+        commonName:
+          type: string
+        alternativeNames:
+          type: array
+          items:
+            type: string
+        validFrom:
+          type: string
+          format: date-time
+        validUntil:
+          type: string
+          format: date-time
+        serialNumber:
+          type: string
+        caOrderId:
+          type: string
+        replacedCertificates:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReplacedCertificate'
+        certificate:
+          type: string
+        caCertificates:
+          type: array
+          items:
+            $ref: '#/components/schemas/CaCertificate'
+        deploymentStatus:
+          type: string
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+    Link:
+      type: object
+      properties:
+        rel:
+          type: string
+        href:
+          type: string
+    ReplacedCertificate:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: error description
+  securitySchemes:
+    X-API-Key:
+      type: apiKey
+      name: X-API-Key
+      in: header
