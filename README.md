@@ -1,17 +1,11 @@
 # Go API client for IONOS hosting api
 
-# Working with the API Every endpoint uses the `X-API-Key` header for authorization, to obtain the key please see the Official Documentation.
+### Working with the API Every endpoint uses the `X-API-Key` header for authorization, to obtain the key please see the Official Documentation.
 
 ## Overview
 - API version: 1.0.0
 - Package version: 1.0.0
 - Build package: io.swagger.codegen.v3.generators.go.GoClientCodegen
-
-## Installation
-Put the package under your project folder and add the following in import:
-```golang
-import "./swagger"
-```
 
 ## Documentation for API Endpoints
 
@@ -67,7 +61,3 @@ auth := context.WithValue(context.Background(), sw.ContextAPIKey, sw.APIKey{
 })
 r, err := client.Service.Operation(auth, args)
 ```
-
-## Author
-
-@stevenklar
